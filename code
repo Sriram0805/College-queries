@@ -1,0 +1,55 @@
+# Import necessary libraries
+import nltk
+from nltk.stem import WordNetLemmatizer
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.linear_model import LogisticRegression
+from sklearn.pipeline import Pipeline
+
+# Download necessary NLTK data
+nltk.download('punkt')
+nltk.download('wordnet')
+nltk.download('stopwords')
+
+# Read queries and responses from uploaded text files
+def load_data(file_path):
+    with open(file_path, 'r') as file:
+        return file.read().splitlines()
+
+queries = load_data('quiers.txt')
+responses = load_data('responses.txt')
+
+# Lemmatizer to preprocess text
+lemmatizer = WordNetLemmatizer()
+
+if len(queries) != len(responses):
+    print(f"Warning: Number of queries ({len(queries)}) and responses ({len(responses)}) is different. This might cause issues during training.")
+    # Adjust the data to ensure equal length. You can either truncate the longer list or add dummy values to the shorter one.
+    min_len = min(len(queries), len(responses))
+    queries = queries[:min_len]
+    responses = responses[:min_len]
+# Preprocess function to clean and lemmatize the text
+def preprocess(text):
+    tokens = nltk.word_tokenize(text.lower())  # Tokenize and convert to lowercase
+    tokens = [lemmatizer.lemmatize(token) for token in tokens if token.isalnum()]  # Lemmatize and remove non-alphanumeric
+    return ' '.join(tokens)
+
+# Apply preprocessing to all queries
+queries_cleaned = [preprocess(query) for query in queries]
+
+# Define a pipeline with TF-IDF vectorizer and Logistic Regression model
+model = Pipeline([
+    ('tfidf', TfidfVectorizer()),
+    ('clf', LogisticRegression())
+])
+
+# Train the model on the preprocessed queries and responses
+model.fit(queries_cleaned, responses)
+
+# Function to generate response from the chatbot
+def get_response(user_input):
+    user_input_cleaned = preprocess(user_input)  # Clean the user input
+    response = model.predict([user_input_cleaned])[0]  # Predict the response
+    return response
+
+# Test the chatbot
+print(get_response("How do I apply for an internship related to this course?"))  # Should output the correct response
